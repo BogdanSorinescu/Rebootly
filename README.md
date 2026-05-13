@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="assets/rebootly-logo-transparent.png" alt="Rebootly Logo" width="80"/>
+</p>
+
 # Rebootly
 
 Rebootly is a web-based platform that helps users troubleshoot, repair, and reuse mobile devices. The application uses an AI assistant to guide users through common phone problems and provides step-by-step software troubleshooting advice.
