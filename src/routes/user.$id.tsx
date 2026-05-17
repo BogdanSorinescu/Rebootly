@@ -10,6 +10,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { apiClient } from "#/integrations/hono/client";
 
+// createFileRoute registers this file as the dynamic /user/$id route.
+// Docs: https://github.com/TanStack/router/blob/main/docs/router/api/router/createFileRouteFunction.md
 export const Route = createFileRoute("/user/$id")({
   component: UserPage,
 });
@@ -44,6 +46,8 @@ function UserPage() {
 function SignedInUser({ id }: { id: string }) {
   const { getToken } = useAuth();
   const { user } = useUser();
+  // useQuery handles the async backend auth check plus loading/error state.
+  // Docs: https://tanstack.com/query/latest/docs/framework/react/quick-start
   const backendAuthQuery = useQuery({
     queryKey: ["backend-auth", user?.id],
     queryFn: async () => {

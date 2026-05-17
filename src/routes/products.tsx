@@ -37,13 +37,19 @@ async function createProduct(name: string) {
   }
 }
 
+// createFileRoute registers this file as the /products route in TanStack Router.
+// Docs: https://github.com/TanStack/router/blob/main/docs/router/api/router/createFileRouteFunction.md
 export const Route = createFileRoute("/products")({
   component: ProductsPage,
 });
 
 function ProductsPage() {
+  // useQueryClient exposes the shared cache so mutations can invalidate queries.
+  // Docs: https://tanstack.com/query/latest/docs/framework/react/quick-start
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
+  // useQuery runs async reads and stores loading/error/data state in the cache.
+  // Docs: https://tanstack.com/query/latest/docs/framework/react/quick-start
   const productsQuery = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
@@ -52,6 +58,8 @@ function ProductsPage() {
     queryKey: ["api-health"],
     queryFn: getApiHealth,
   });
+  // useMutation is for writes; onSuccess refreshes the affected query data.
+  // Docs: https://tanstack.com/query/latest/docs/framework/react/quick-start
   const createProductMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: async () => {

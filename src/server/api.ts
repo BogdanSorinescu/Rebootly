@@ -15,6 +15,8 @@ const clerkClient = createClerkClient({
   publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
 });
 
+// Hono builds a fetch-compatible HTTP app; chaining routes preserves RPC types.
+// Docs: https://hono.dev/docs/api/hono
 export const api = new Hono()
   .basePath("/api")
   .get("/", (c) => c.json({ ok: true, message: "Hono API is running" }))

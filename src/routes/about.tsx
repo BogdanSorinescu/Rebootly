@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+// createFileRoute maps this file to the /about route.
+// Docs: https://github.com/TanStack/router/blob/main/docs/router/api/router/createFileRouteFunction.md
 export const Route = createFileRoute("/about")({
   component: AboutPage,
 });

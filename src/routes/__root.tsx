@@ -16,6 +16,8 @@ import ClerkProvider from "#/integrations/clerk/provider";
 import QueryProvider from "#/integrations/query/provider";
 import appCss from "#/styles.css?url";
 
+// createRootRoute defines the top-level shell shared by every child route.
+// Docs: https://github.com/TanStack/router/blob/main/docs/router/api/router/createRootRouteFunction.md
 export const Route = createRootRoute({
   head: () => ({
     meta: [
