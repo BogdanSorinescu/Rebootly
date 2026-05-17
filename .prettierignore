@@ -1,3 +1,6 @@
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
+.content-collections
+.output
+.vite
+node_modules
+drizzle/meta
+src/routeTree.gen.ts

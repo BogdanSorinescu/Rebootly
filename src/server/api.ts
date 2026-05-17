@@ -1,123 +1,63 @@
-import { Hono } from 'hono'
-import type { Context } from 'hono'
-import { chat, maxIterations, toServerSentEventsResponse } from '@tanstack/ai'
-import { anthropicText } from '@tanstack/ai-anthropic'
-import { openaiText } from '@tanstack/ai-openai'
-import { geminiText } from '@tanstack/ai-gemini'
-import { ollamaText } from '@tanstack/ai-ollama'
+import { createClerkClient } from "@clerk/backend";
+import { desc } from "drizzle-orm";
+import { Hono } from "hono";
+import { z } from "zod";
 
-import {
-  getSpeakerBySlug,
-  getTalkBySlug,
-  getAllSpeakers,
-  getAllTalks,
-  searchConference,
-} from '#/lib/conference-tools'
+import { db } from "#/db/index";
+import { products } from "#/db/schema";
 
-export const api = new Hono().basePath('/api')
+export const api = new Hono().basePath("/api");
 
-const healthHandler = (c: Context) => {
-  return c.json({ ok: true, message: 'Hono API is running' })
-}
+const createProductSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
 
-api.get('/', healthHandler)
-api.get('', healthHandler)
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY,
+  publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
+});
 
-api.post('/remy-chat', async (c) => {
-  const requestSignal = c.req.raw.signal
+api.get("/", (c) => c.json({ ok: true, message: "Hono API is running" }));
 
-  if (requestSignal.aborted) {
-    return new Response(null, { status: 499 })
+api.get("/health", (c) => c.json({ ok: true }));
+
+api.get("/products", async (c) => {
+  const rows = await db.query.products.findMany({
+    orderBy: [desc(products.createdAt)],
+  });
+
+  return c.json({ products: rows });
+});
+
+api.post("/products", async (c) => {
+  const parsed = createProductSchema.safeParse(await c.req.json());
+
+  if (!parsed.success) {
+    return c.json({ error: "Invalid input", issues: parsed.error.issues }, 400);
   }
 
-  const abortController = new AbortController()
+  const [product] = await db
+    .insert(products)
+    .values({ name: parsed.data.name })
+    .returning();
 
-  try {
-    const body = await c.req.json()
-    const { messages, speakerSlug, talkSlug } = body
+  return c.json({ product }, 201);
+});
 
-    const SYSTEM_PROMPT = `You are Remy, a charming and knowledgeable culinary assistant for the Haute Pâtisserie 2026 conference in Paris. You have a warm, enthusiastic personality and deep appreciation for the art of pastry and baking.
-
-PERSONALITY:
-- Speak with warmth and a touch of French flair (occasional "magnifique!", "c'est parfait!", etc.)
-- Be genuinely passionate about pastry, bread, and culinary arts
-- Knowledgeable about techniques, ingredients, and the history of baking
-- Helpful and encouraging to both novices and professionals
-
-CAPABILITIES:
-1. Use getSpeakerBySlug to get detailed information about a specific speaker
-2. Use getTalkBySlug to get detailed information about a specific session
-3. Use getAllSpeakers to see the complete speaker lineup
-4. Use getAllTalks to see all available sessions
-5. Use searchConference to find speakers or sessions matching a topic or keyword
-
-INSTRUCTIONS:
-- When asked about the conference, speakers, or sessions, use your tools to provide accurate information
-- Help attendees find sessions that match their interests
-- Share enthusiasm about the speakers and their expertise
-- If asked about pastry techniques, you can provide general knowledge while recommending relevant sessions
-- Keep responses conversational but informative
-- When recommending sessions, explain why they might be interesting based on the user's query
-
-${speakerSlug ? `CONTEXT: The user is viewing the profile of the speaker with slug "${speakerSlug}".` : ''}
-${talkSlug ? `CONTEXT: The user is viewing the session with slug "${talkSlug}".` : ''}
-
-Remember: You are the friendly face of Haute Pâtisserie 2026. Make every attendee feel welcome and excited about the culinary journey ahead!`
-
-    let provider: 'anthropic' | 'openai' | 'gemini' | 'ollama' = 'ollama'
-    let model = 'mistral:7b'
-
-    if (process.env.ANTHROPIC_API_KEY) {
-      provider = 'anthropic'
-      model = 'claude-haiku-4-5'
-    } else if (process.env.OPENAI_API_KEY) {
-      provider = 'openai'
-      model = 'gpt-4o'
-    } else if (process.env.GEMINI_API_KEY) {
-      provider = 'gemini'
-      model = 'gemini-2.0-flash-exp'
-    }
-
-    const adapterConfig = {
-      anthropic: () => anthropicText(model as any),
-      openai: () => openaiText(model as any),
-      gemini: () => geminiText(model as any),
-      ollama: () => ollamaText(model as any),
-    }
-
-    const stream = chat({
-      adapter: adapterConfig[provider](),
-      tools: [
-        getSpeakerBySlug,
-        getTalkBySlug,
-        getAllSpeakers,
-        getAllTalks,
-        searchConference,
-      ],
-      systemPrompts: [SYSTEM_PROMPT],
-      agentLoopStrategy: maxIterations(5),
-      messages,
-      abortController,
-    })
-
-    return toServerSentEventsResponse(stream, { abortController })
-  } catch (error: any) {
-    console.error('Remy chat error:', error)
-
-    if (error.name === 'AbortError' || abortController.signal.aborted) {
-      return new Response(null, { status: 499 })
-    }
-
-    return c.json(
-      {
-        error: 'Failed to process chat request',
-        message: error.message,
-      },
-      500,
-    )
+api.get("/me", async (c) => {
+  if (!process.env.CLERK_SECRET_KEY) {
+    return c.json({ error: "CLERK_SECRET_KEY is not configured" }, 500);
   }
-})
 
-api.notFound((c) => {
-  return c.json({ error: 'Not found' }, 404)
-})
+  const authenticatedRequest = await clerkClient.authenticateRequest(c.req.raw);
+
+  if (!authenticatedRequest.isAuthenticated) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const auth = authenticatedRequest.toAuth();
+
+  return c.json({ userId: auth.userId });
+});
+
+api.notFound((c) => c.json({ error: "Not found" }, 404));

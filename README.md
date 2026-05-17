@@ -56,5 +56,3 @@ Rebootly supports a more sustainable approach to technology by promoting repair,
 - Daniel Carlén
 - Balazs Hevesi
 - Giuseppe Rainone
-
-
