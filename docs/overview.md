@@ -3,12 +3,15 @@
 - Install [Node.js and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 - Optional: install [opencode](https://opencode.ai/) if you want to use an AI coding agent.
 - Copy the variables from [`.env.example`](../.env.example) into `.env.local` and fill in the Clerk and database values.
+- Environment variables are validated in [`src/env.ts`](../src/env.ts); import
+  `env` from there instead of reading `process.env` or `import.meta.env`
+  directly.
 - Run `npm install` from the project root to install dependencies.
 - Run `npm run dev` to start the app on `http://localhost:3000`.
 
 ## Useful Commands
 
-- `npm run dev` - start the development server - *this is the most important one*
+- `npm run dev` - start the development server - _this is the most important one_
 - `npm run build` - build the app for production.
 - `npm run test` - run tests.
 - `npm run lint` - run ESLint.

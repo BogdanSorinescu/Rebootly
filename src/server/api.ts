@@ -5,14 +5,15 @@ import { z } from "zod";
 
 import { db } from "#/db/index";
 import { products } from "#/db/schema";
+import { env } from "#/env";
 
 const createProductSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
 const clerkClient = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY,
-  publishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
+  secretKey: env.CLERK_SECRET_KEY,
+  publishableKey: env.VITE_CLERK_PUBLISHABLE_KEY,
 });
 
 // Hono builds a fetch-compatible HTTP app; chaining routes preserves RPC types.
@@ -46,10 +47,6 @@ export const api = new Hono()
     return c.json({ product }, 201);
   })
   .get("/me", async (c) => {
-    if (!process.env.CLERK_SECRET_KEY) {
-      return c.json({ error: "CLERK_SECRET_KEY is not configured" }, 500);
-    }
-
     const authenticatedRequest = await clerkClient.authenticateRequest(
       c.req.raw,
     );

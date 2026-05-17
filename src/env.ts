@@ -1,10 +1,13 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+// this file is used to validate the environment variables at runtime
+// docs: https://github.com/t3-oss/t3-env
+
 export const env = createEnv({
   server: {
-    CLERK_SECRET_KEY: z.string().min(1).optional(),
-    DATABASE_URL: z.string().url().optional(),
+    CLERK_SECRET_KEY: z.string().min(1),
+    DATABASE_URL: z.string().url(),
   },
 
   /**
@@ -14,14 +17,17 @@ export const env = createEnv({
   clientPrefix: "VITE_",
 
   client: {
-    VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
+    VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1),
   },
 
   /**
    * What object holds the environment variables at runtime. This is usually
    * `process.env` or `import.meta.env`.
    */
-  runtimeEnv: import.meta.env,
+  runtimeEnv: {
+    ...(typeof process === "undefined" ? {} : process.env),
+    ...import.meta.env,
+  },
 
   /**
    * By default, this library will feed the environment variables directly to
