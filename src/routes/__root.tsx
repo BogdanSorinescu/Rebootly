@@ -80,6 +80,12 @@ function RootDocument({ children }: { children: ReactNode }) {
                       Products
                     </Link>
                     <Link
+                      to="/view-products"
+                      activeProps={{ className: "text-white" }}
+                    >
+                      View products
+                    </Link>
+                    <Link
                       to="/user/$id"
                       params={{ id: "me" }}
                       activeProps={{ className: "text-white" }}
