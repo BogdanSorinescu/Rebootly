@@ -27,8 +27,29 @@ export const Route = createRootRoute({
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
+  notFoundComponent: NotFoundPage,
   shellComponent: RootDocument,
 });
+
+function NotFoundPage() {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/5 p-8">
+      <p className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-400">
+        404
+      </p>
+      <h1 className="mb-3 text-3xl font-semibold">Page not found</h1>
+      <p className="mb-6 text-slate-300">
+        The page you are looking for does not exist.
+      </p>
+      <Link
+        to="/"
+        className="inline-flex rounded-lg bg-white px-4 py-2 font-medium text-slate-950"
+      >
+        Go home
+      </Link>
+    </section>
+  );
+}
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
