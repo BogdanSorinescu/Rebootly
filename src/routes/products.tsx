@@ -1,45 +1,74 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { desc } from "drizzle-orm";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import type { FormEvent } from "react";
 
-import { db } from "#/db/index";
-import { products } from "#/db/schema";
+import { apiClient } from "#/integrations/hono/client";
 
-const getProducts = createServerFn({ method: "GET" }).handler(async () => {
-  return await db.query.products.findMany({
-    orderBy: [desc(products.createdAt)],
+async function getProducts() {
+  const response = await apiClient.api.products.$get();
+
+  if (!response.ok) {
+    throw new Error("Failed to load products.");
+  }
+
+  const data = await response.json();
+  return data.products;
+}
+
+async function getApiHealth() {
+  const response = await apiClient.api.health.$get();
+
+  if (!response.ok) {
+    return false;
+  }
+
+  const data = (await response.json()) as { ok: boolean };
+  return data.ok;
+}
+
+async function createProduct(name: string) {
+  const response = await apiClient.api.products.$post({
+    json: { name },
   });
-});
+
+  if (!response.ok) {
+    throw new Error("Product name is required.");
+  }
+}
 
 export const Route = createFileRoute("/products")({
-  loader: async () => await getProducts(),
   component: ProductsPage,
 });
 
 function ProductsPage() {
-  const router = useRouter();
-  const productRows = Route.useLoaderData();
-  const [apiStatus, setApiStatus] = useState("checking");
+  const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
+  const productsQuery = useQuery({
+    queryKey: ["products"],
+    queryFn: getProducts,
+  });
+  const healthQuery = useQuery({
+    queryKey: ["api-health"],
+    queryFn: getApiHealth,
+  });
+  const createProductMutation = useMutation({
+    mutationFn: createProduct,
+    onSuccess: async () => {
+      setMessage("Product created.");
+      await queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (error) => {
+      setMessage(error.message);
+    },
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch("/api/health")
-      .then((response) => response.json())
-      .then((data: { ok: boolean }) => {
-        if (!cancelled) setApiStatus(data.ok ? "online" : "offline");
-      })
-      .catch(() => {
-        if (!cancelled) setApiStatus("offline");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const productRows = productsQuery.data ?? [];
+  const apiStatus = healthQuery.isPending
+    ? "checking"
+    : healthQuery.data
+      ? "online"
+      : "offline";
 
   async function handleCreateProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,20 +78,13 @@ function ProductsPage() {
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "");
 
-    const response = await fetch("/api/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-
-    if (!response.ok) {
-      setMessage("Product name is required.");
+    try {
+      await createProductMutation.mutateAsync(name);
+    } catch {
       return;
     }
 
     form.reset();
-    setMessage("Product created.");
-    await router.invalidate();
   }
 
   return (
@@ -70,8 +92,7 @@ function ProductsPage() {
       <div>
         <h1 className="mb-3 text-3xl font-semibold">Products</h1>
         <p className="text-slate-300">
-          This page demonstrates server-side data loading and client-side API
-          calls.
+          This page demonstrates TanStack Query data loading and mutations.
         </p>
       </div>
 
@@ -89,12 +110,18 @@ function ProductsPage() {
           placeholder="New product name"
           className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-white outline-none focus:border-sky-400"
         />
-        <button className="rounded-lg bg-sky-400 px-4 py-2 font-semibold text-slate-950">
-          Add product
+        <button
+          disabled={createProductMutation.isPending}
+          className="rounded-lg bg-sky-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {createProductMutation.isPending ? "Adding..." : "Add product"}
         </button>
       </form>
 
       {message ? <p className="text-sm text-slate-300">{message}</p> : null}
+      {productsQuery.isError ? (
+        <p className="text-sm text-red-300">Failed to load products.</p>
+      ) : null}
 
       <ul className="space-y-2">
         {productRows.map((product) => (
@@ -105,7 +132,10 @@ function ProductsPage() {
             {product.name}
           </li>
         ))}
-        {productRows.length === 0 ? (
+        {productsQuery.isPending ? (
+          <li className="text-slate-400">Loading products...</li>
+        ) : null}
+        {!productsQuery.isPending && productRows.length === 0 ? (
           <li className="text-slate-400">No products yet.</li>
         ) : null}
       </ul>

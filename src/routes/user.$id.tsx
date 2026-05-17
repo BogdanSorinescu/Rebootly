@@ -5,8 +5,10 @@ import {
   useAuth,
   useUser,
 } from "@clerk/clerk-react";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+
+import { apiClient } from "#/integrations/hono/client";
 
 export const Route = createFileRoute("/user/$id")({
   component: UserPage,
@@ -42,38 +44,29 @@ function UserPage() {
 function SignedInUser({ id }: { id: string }) {
   const { getToken } = useAuth();
   const { user } = useUser();
-  const [backendStatus, setBackendStatus] = useState("checking");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadMe() {
+  const backendAuthQuery = useQuery({
+    queryKey: ["backend-auth", user?.id],
+    queryFn: async () => {
       const token = await getToken();
-      const response = await fetch("/api/me", {
+      const response = await apiClient.api.me.$get({
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
-      const data = (await response.json()) as {
-        userId?: string;
-        error?: string;
-      };
+      const data = await response.json();
 
-      if (!cancelled) {
-        setBackendStatus(
-          response.ok
-            ? `authenticated as ${data.userId}`
-            : (data.error ?? "failed"),
-        );
+      if (!response.ok) {
+        throw new Error("error" in data ? data.error : "failed");
       }
-    }
 
-    loadMe().catch(() => {
-      if (!cancelled) setBackendStatus("failed");
-    });
+      return data.userId;
+    },
+    enabled: Boolean(user?.id),
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [getToken]);
+  const backendStatus = backendAuthQuery.isPending
+    ? "checking"
+    : backendAuthQuery.isError
+      ? backendAuthQuery.error.message
+      : `authenticated as ${backendAuthQuery.data}`;
 
   return (
     <div className="space-y-4">
