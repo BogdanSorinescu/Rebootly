@@ -2,7 +2,7 @@
 
 - Install [Node.js and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 - Optional: install [opencode](https://opencode.ai/) if you want to use an AI coding agent.
-- Copy the variables from [`.env.example`](../.env.example) into `.env.local` and fill in the Clerk and database values.
+- Copy the variables from [`.env.example`](../.env.example) into `.env.local` and **fill in the Clerk and database values**.
 - Environment variables are validated in [`src/env.ts`](../src/env.ts); import
   `env` from there instead of reading `process.env` or `import.meta.env`
   directly.
