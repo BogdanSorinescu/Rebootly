@@ -1,10 +1,10 @@
 import { createClerkClient } from "@clerk/backend";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
 import { db } from "#/db/index";
-import { products } from "#/db/schema";
+import { products, orders } from "#/db/schema";
 import { env } from "#/env";
 
 const createProductSchema = z.object({
@@ -58,6 +58,33 @@ export const api = new Hono()
     const auth = authenticatedRequest.toAuth();
 
     return c.json({ userId: auth.userId });
+  })
+  .post("/refund/:orderId", async (c) => {
+    const authenticatedRequest = await clerkClient.authenticateRequest(
+      c.req.raw,
+    );
+
+    if (!authenticatedRequest.isAuthenticated) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const orderId = Number(c.req.param("orderId"));
+
+    if (isNaN(orderId)) {
+      return c.json({ error: "Invalid order ID" }, 400);
+    }
+
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ status: "refunded", refundedAt: new Date() })
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    if (!updatedOrder) {
+      return c.json({ error: "Order not found" }, 404);
+    }
+
+    return c.json({ order: updatedOrder });
   })
   .notFound((c) => c.json({ error: "Not found" }, 404));
 
