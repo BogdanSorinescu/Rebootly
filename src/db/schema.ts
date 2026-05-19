@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -43,6 +44,7 @@ export const products = pgTable("products", {
   saleEndsAt: timestamp("sale_ends_at"),
 
   stockQuantity: integer("stock_quantity").notNull().default(0),
+  lowStockThreshold: integer("low_stock_threshold").notNull().default(0),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -73,4 +75,67 @@ export const promoCodes = pgTable(
     isActive: boolean("is_active").notNull().default(true),
   },
   (table) => [uniqueIndex("promo_codes_code_idx").on(table.code)],
+);
+
+export const inventoryAdjustmentType = pgEnum("inventory_adjustment_type", [
+  "manual",
+  "restock",
+  "sale",
+  "return",
+  "correction",
+]);
+
+export const productVariants = pgTable(
+  "product_variants",
+  {
+    id: serial().primaryKey(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    sku: text().notNull(),
+    color: text(),
+    storageGb: integer("storage_gb"),
+    condition: productCondition().notNull(),
+    priceCents: integer("price_cents").notNull(),
+    salePriceCents: integer("sale_price_cents"),
+    saleStartsAt: timestamp("sale_starts_at"),
+    saleEndsAt: timestamp("sale_ends_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("product_variants_sku_idx").on(table.sku),
+    index("product_variants_product_id_idx").on(table.productId),
+  ],
+);
+
+export const inventoryManagement = pgTable(
+  "inventory_management",
+  {
+    id: serial().primaryKey(),
+    variantId: integer("variant_id")
+      .notNull()
+      .references(() => productVariants.id, { onDelete: "cascade" }),
+    quantityChange: integer("quantity_change").notNull(),
+    type: inventoryAdjustmentType("type").notNull(),
+    note: text(),
+    adjustedByUserId: text("adjusted_by_user_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("inventory_management_variant_id_idx").on(table.variantId)],
+);
+
+export const inventory = pgTable(
+  "inventory",
+  {
+    id: serial().primaryKey(),
+
+    variantId: integer("variant_id")
+      .notNull()
+      .references(() => productVariants.id, { onDelete: "cascade" }),
+    stockQuantity: integer("stock_quantity").notNull().default(0),
+    lowStockThreshold: integer("low_stock_threshold").notNull().default(0),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("inventory_variant_id_idx").on(table.variantId)],
 );
