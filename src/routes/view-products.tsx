@@ -1,23 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 
-const getServerProducts = createServerFn({ method: "GET" }).handler(async () => {
-  const [{ desc }, { db }, { products }] = await Promise.all([
-    import("drizzle-orm"),
-    import("#/db/index"),
-    import("#/db/schema"),
-  ]);
+const getServerProducts = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const [{ desc }, { db }, { products }] = await Promise.all([
+      import("drizzle-orm"),
+      import("#/db/index"),
+      import("#/db/schema"),
+    ]);
 
-  const rows = await db.query.products.findMany({
-    orderBy: [desc(products.createdAt)],
-  });
+    const rows = await db.query.products.findMany({
+      orderBy: [desc(products.createdAt)],
+    });
 
-  return rows.map((product) => ({
-    id: product.id,
-    name: product.name,
-    createdAt: product.createdAt?.toISOString() ?? null,
-  }));
-});
+    return rows.map((product) => ({
+      id: product.id,
+      name: product.name,
+      createdAt: product.createdAt?.toISOString() ?? null,
+    }));
+  },
+);
 
 // This route demonstrates server-side data fetching via a route loader.
 export const Route = createFileRoute("/view-products")({
@@ -33,8 +35,8 @@ function ViewProductsPage() {
       <div>
         <h1 className="mb-3 text-3xl font-semibold">View products</h1>
         <p className="text-slate-300">
-          This page loads products in the route loader through a server function,
-          so the initial product list is fetched on the server.
+          This page loads products in the route loader through a server
+          function, so the initial product list is fetched on the server.
         </p>
       </div>
 

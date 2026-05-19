@@ -8,6 +8,27 @@
       "when": 1779033604737,
       "tag": "0000_flowery_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779113362377,
+      "tag": "0001_closed_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779115055858,
+      "tag": "0002_burly_hawkeye",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779208996474,
+      "tag": "0003_windy_thundra",
+      "breakpoints": true
     }
   ]
 }
