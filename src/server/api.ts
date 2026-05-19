@@ -9,6 +9,15 @@ import { env } from "#/env";
 
 const createProductSchema = z.object({
   name: z.string().trim().min(1).max(80),
+  brand: z.string().trim().min(1).max(80).default("Unknown"),
+  model: z.string().trim().min(1).max(80).default("Unknown"),
+  description: z.string().trim().max(1000).optional(),
+  condition: z
+    .enum(["new", "like_new", "good", "fair", "poor"])
+    .default("good"),
+  status: z.enum(["draft", "active", "sold_out", "archived"]).default("draft"),
+  priceCents: z.number().int().min(0).default(0),
+  stockQuantity: z.number().int().min(0).default(0),
 });
 
 const clerkClient = createClerkClient({
@@ -39,10 +48,7 @@ export const api = new Hono()
       );
     }
 
-    const [product] = await db
-      .insert(products)
-      .values({ name: parsed.data.name })
-      .returning();
+    const [product] = await db.insert(products).values(parsed.data).returning();
 
     return c.json({ product }, 201);
   })
